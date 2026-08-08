@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>{% block title %}{{ get_site_settings().site_title if get_site_settings() else 'YASH WORLD' }}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        /* ============================================
+           CSS CUSTOM PROPERTIES
+           ============================================ */
+        :root {
+            --bg-primary: #eef2f7;
+            --bg-secondary: #ffffff;
+            --text-primary: #646d79;
+            --text-secondary: #69727e;
+            --text-muted: #9aa3ae;
+            --shadow-light: #cfd5dc;
+            --shadow-dark: #ffffff;
+            --card-bg: #eef2f7;
+            --accent-blue: #4f7cff;
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-yellow: #f39c12;
+            --accent-purple: #9b59b6;
+            --accent-orange: #e67e22;
+            --accent-pink: #e84393;
+            --accent-teal: #1abc9c;
+            --font-family: 'Manrope', sans-serif;
+            --card-shadow: 22px 22px 44px var(--shadow-light), -22px -22px 44px var(--shadow-dark);
+            --inset-shadow: inset 6px 6px 12px var(--shadow-light), inset -6px -6px 12px var(--shadow-dark);
+            --gradient-primary: linear-gradient(135deg, #4f7cff, #6c5ce7);
+            --gradient-gold: linear-gradient(135deg, #f7971e, #ffd200);
+        }
+        [data-theme="dark"] {
+            --bg-primary: #1a1d23;
+            --bg-secondary: #24282f;
+            --text-primary: #d8dde5;
+            --text-secondary: #b7bdc6;
+            --text-muted: #69727e;
+            --shadow-light: #15181d;
+            --shadow-dark: #333840;
+            --card-bg: #24282f;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-primary);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-primary);
+            transition: background 0.35s ease;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card {
+            padding: 30px;
+            border-radius: 25px;
+            background: var(--card-bg);
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+        }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 42px; font-weight: 800; color: var(--text-secondary); }
+        .header p { color: var(--text-muted); font-size: 16px; }
+        .btn {
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 700;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-family: var(--font-family);
+            box-shadow: 8px 8px 16px var(--shadow-light), -8px -8px 16px var(--shadow-dark);
+        }
+        .btn:hover { transform: translateY(-3px); }
+        .btn-primary { background: var(--gradient-primary); color: white; }
+        .btn-success { background: var(--accent-green); color: white; }
+        .btn-danger { background: var(--accent-red); color: white; }
+        .btn-warning { background: var(--accent-yellow); color: white; }
+        .btn-gold { background: var(--gradient-gold); color: #333; }
+        .btn-sm { padding: 8px 16px; font-size: 13px; }
+        .btn-lg { padding: 16px 35px; font-size: 17px; }
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: var(--card-bg);
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+            font-size: 22px;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .dark-mode-toggle:hover { transform: scale(1.1) rotate(20deg); }
+        .flash-messages { margin-bottom: 20px; }
+        .flash-message {
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            animation: slideDown 0.3s ease-out;
+        }
+        .flash-message.success { background: #d4edda; color: #155724; border-color: var(--accent-green); }
+        .flash-message.danger { background: #f8d7da; color: #721c24; border-color: var(--accent-red); }
+        .flash-message.info { background: #d1ecf1; color: #0c5460; border-color: var(--accent-blue); }
+        .flash-message.warning { background: #fff3cd; color: #856404; border-color: var(--accent-yellow); }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 2px solid var(--shadow-light);
+            margin-bottom: 20px;
+        }
+        .user-nav .user-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .user-nav .user-info .badge {
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+        }
+        .badge-admin { background: var(--accent-blue); }
+        .badge-friend { background: var(--accent-green); }
+        .badge-gold { background: var(--gradient-gold); color: #333; }
+        .media-container { margin: 15px 0; }
+        .media-container img, .media-container video {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+        .media-container audio { width: 100%; border-radius: 12px; }
+        .empty-state { text-align: center; padding: 40px 20px; }
+        .empty-state .icon { font-size: 64px; display: block; margin-bottom: 15px; }
+        .empty-state h3 { color: var(--text-secondary); margin-bottom: 10px; }
+        .empty-state p { color: var(--text-muted); }
+        #toastContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 14px 20px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            box-shadow: var(--card-shadow);
+            animation: toastSlide 0.3s ease;
+            border-left: 4px solid var(--accent-blue);
+            max-width: 350px;
+        }
+        @keyframes toastSlide {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .media-reveal-btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-family);
+            font-size: 14px;
+            background: var(--bg-primary);
+            box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);
+            color: var(--text-secondary);
+        }
+        .media-reveal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 10px 10px 20px var(--shadow-light), -10px -10px 20px var(--shadow-dark);
+        }
+        .media-reveal-btn .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            font-size: 12px;
+        }
+        .media-reveal-btn.active .arrow {
+            transform: rotate(180deg);
+        }
+        .media-reveal-btn .icon { font-size: 18px; }
+        .media-reveal-btn.image-btn { border-left: 4px solid var(--accent-blue); }
+        .media-reveal-btn.video-btn { border-left: 4px solid var(--accent-red); }
+        .media-reveal-btn.audio-btn { border-left: 4px solid var(--accent-green); }
+        .media-content {
+            animation: mediaReveal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes mediaReveal {
+            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .card { padding: 18px; }
+            .header h1 { font-size: 28px; }
+            .user-nav { flex-direction: column; align-items: stretch; text-align: center; }
+            .user-nav .user-info { justify-content: center; }
+            .btn { width: 100%; justify-content: center; }
+            .media-reveal-btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="dark-mode-toggle" onclick="toggleDarkMode()">🌓</button>
+<div id="toastContainer"></div>
+
+<div class="container">
+    <div class="card">
+        <div class="header">
+            <h1>{% block header_title %}{{ get_site_settings().site_title if get_site_settings() else 'YASH WORLD' }}{% endblock %}</h1>
+            <p>{% block header_tagline %}{{ get_site_settings().site_tagline if get_site_settings() else 'Private Messaging Platform' }}{% endblock %}</p>
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <div class="user-nav">
+            <div class="user-info">
+                <span>👋 <strong>{{ current_user.username }}</strong></span>
+                {% if current_user.is_admin %}<span class="badge badge-admin">Admin</span>{% endif %}
+                {% if current_user.is_friend %}<span class="badge badge-friend">Friend</span>{% endif %}
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-sm">💬 Dashboard</a>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('ask_question') }}" class="btn btn-success btn-sm">✏️ Ask</a>
+                <a href="{{ url_for('admin_users') }}" class="btn btn-warning btn-sm">👥 Users</a>
+                <a href="{{ url_for('admin_feedback') }}" class="btn btn-gold btn-sm">⭐ Feedback</a>
+                <a href="{{ url_for('admin_responses') }}" class="btn btn-primary btn-sm">📊 Responses</a>
+                <a href="{{ url_for('admin_typing_text') }}" class="btn btn-sm" style="background: var(--accent-teal); color: white;">✏️ Typing</a>
+                <a href="{{ url_for('admin_settings') }}" class="btn btn-sm" style="background: var(--accent-purple); color: white;">⚙️</a>
+                {% else %}
+                <button onclick="toggleFeedback()" class="btn btn-gold btn-sm">⭐ Rate Me</button>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm">🚪 Logout</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script>
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    if (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+});
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.style.borderLeftColor = type === 'success' ? '#2ecc71' : type === 'error' ? '#e74c3c' : '#4f7cff';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+console.log('🌟 YASH WORLD - Private Messaging Platform');
+console.log('👤 Admin: yash / admin123');
+console.log('👤 Friend: Glory / lory');
+console.log('💾 ALL DATA stored in Database - PERMANENT!');
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 420px; margin: 0 auto; padding: 35px 30px; border-radius: 25px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+    <!-- Logo/Icon -->
+    <div style="text-align: center; margin-bottom: 25px;">
+        <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--gradient-primary); margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 10px 40px rgba(79,124,255,0.3);">
+            🌟
+        </div>
+        <h2 style="color: var(--text-secondary); margin-bottom: 5px; font-size: 26px;">Welcome Back</h2>
+        <p style="color: var(--text-muted); font-size: 14px;">Sign in to your account</p>
+    </div>
+    
+    <form method="post" style="display: flex; flex-direction: column; gap: 18px;">
+        <!-- Username Field -->
+        <div style="position: relative;">
+            <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text-muted);">👤</span>
+            <input type="text" name="username" required placeholder="Username"
+                   style="width: 100%; padding: 16px 20px 16px 50px; border: none; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); font-size: 16px; color: var(--text-primary); outline: none; font-family: var(--font-family); transition: all 0.3s ease;"
+                   id="usernameInput">
+        </div>
+        
+        <!-- Password Field -->
+        <div style="position: relative;">
+            <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--text-muted);">🔒</span>
+            <input type="password" name="password" required placeholder="Password"
+                   style="width: 100%; padding: 16px 20px 16px 50px; border: none; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); font-size: 16px; color: var(--text-primary); outline: none; font-family: var(--font-family); transition: all 0.3s ease;"
+                   id="passwordInput">
+            <button type="button" onclick="togglePassword()" 
+                    style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px; box-shadow: none; min-width: auto; color: var(--text-muted); transition: color 0.3s ease;">
+                👁️
+            </button>
+        </div>
+        
+        <!-- Remember Me -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" name="remember" id="remember" style="transform: scale(1.2); accent-color: var(--accent-blue); cursor: pointer;">
+            <label for="remember" style="color: var(--text-muted); font-size: 14px; cursor: pointer;">Remember me</label>
+        </div>
+        
+        <!-- Login Button -->
+        <button type="submit" class="btn btn-primary btn-lg" id="loginBtn" 
+                style="width: 100%; justify-content: center; padding: 18px; font-size: 18px; border-radius: 20px; background: var(--gradient-primary); color: white; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 30px rgba(79,124,255,0.4); font-weight: 700; display: flex; align-items: center; gap: 10px;">
+            <span>🚀</span> Login
+            <span style="transition: transform 0.3s ease;">→</span>
+        </button>
+    </form>
+    
+    <!-- Quick Login Cards -->
+    <div style="margin-top: 25px;">
+        <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">— Quick Access —</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <!-- Admin Login Card -->
+            <div onclick="fillDemo('@thenameisyash','last MSg')" 
+                 style="padding: 16px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--card-shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; border: 2px solid transparent; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-primary);"></div>
+                <div style="font-size: 28px; margin-bottom: 5px;">👑</div>
+                <div style="font-weight: 700; color: var(--accent-blue); font-size: 14px;">Admin</div>
+                <div style="font-size: 11px; color: var(--text-muted);">yash / admin123</div>
+                <div style="margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 20px; background: var(--gradient-primary); color: white; font-size: 10px; font-weight: 600;">Click to Fill</div>
+            </div>
+            
+            <!-- Friend Login Card -->
+            <div onclick="fillDemo('Glory','Glory')" 
+                 style="padding: 16px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--card-shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; border: 2px solid transparent; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient-gold);"></div>
+                <div style="font-size: 28px; margin-bottom: 5px;">🤝</div>
+                <div style="font-weight: 700; color: var(--accent-gold); font-size: 14px; color: var(--accent-orange);">Friend</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Glory / lory</div>
+                <div style="margin-top: 8px; display: inline-block; padding: 4px 14px; border-radius: 20px; background: var(--gradient-gold); color: #333; font-size: 10px; font-weight: 600;">Click to Fill</div>
+            </div>
+        </div>
+        
+        <!-- Quick Fill Button (Alternative) -->
+        <div style="text-align: center; margin-top: 15px; padding: 12px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">💡 Quick Fill Options</p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="fillDemo('yash','admin123')" class="btn btn-sm" style="background: var(--gradient-primary); color: white; padding: 8px 20px; font-size: 12px; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease;">
+                    ⚡ Admin
+                </button>
+                <button onclick="fillDemo('Glory','lory')" class="btn btn-sm" style="background: var(--gradient-gold); color: #333; padding: 8px 20px; font-size: 12px; border-radius: 12px; border: none; cursor: pointer; transition: all 0.3s ease;">
+                    ⚡ Friend
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Quick Access Card Hover Effects */
+[onclick="fillDemo"]:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 12px 12px 24px var(--shadow-light), -12px -12px 24px var(--shadow-dark);
+}
+
+[onclick="fillDemo"]:active {
+    transform: scale(0.97);
+}
+
+#loginBtn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(79,124,255,0.5);
+}
+
+#loginBtn:active {
+    transform: scale(0.97);
+}
+
+#loginBtn:hover span:last-child {
+    transform: translateX(5px);
+}
+
+@media (max-width: 480px) {
+    .grid-cards { grid-template-columns: 1fr !important; }
+}
+</style>
+
+<script>
+function togglePassword() {
+    const input = document.getElementById('passwordInput');
+    const btn = event.target;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
+function fillDemo(username, password) {
+    document.getElementById('usernameInput').value = username;
+    document.getElementById('passwordInput').value = password;
+    
+    // Visual feedback - pulse animation
+    const btn = event && event.target ? event.target.closest('[onclick]') : null;
+    if (btn) {
+        btn.style.borderColor = 'var(--accent-green)';
+        setTimeout(() => { btn.style.borderColor = 'transparent'; }, 1000);
+    }
+    
+    showToast('✅ Credentials filled! Click Login.', 'success');
+}
+
+// Auto-focus on username
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('usernameInput').focus();
+});
+</script>
+{% endblock %}

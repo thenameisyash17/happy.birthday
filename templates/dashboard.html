@@ -1,0 +1,678 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- ============================================ -->
+<!-- DASHBOARD HEADER -->
+<!-- ============================================ -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+    <div>
+        <h2 style="color: var(--text-secondary);">💬 Questions & Answers</h2>
+        <p style="color: var(--text-muted); font-size: 14px;">
+            {% if current_user.is_friend and not current_user.is_admin %}
+            🤝 Welcome Friend! You can reply to questions.
+            {% elif current_user.is_admin %}
+            👑 Welcome Admin! You can ask questions and manage everything.
+            {% else %}
+            👋 Welcome {{ current_user.username }}!
+            {% endif %}
+        </p>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('ask_question') }}" class="btn btn-success btn-lg" style="display: flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 16px; background: var(--gradient-primary); color: white; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 8px 25px rgba(79,124,255,0.3);">
+            <span style="font-size: 20px;">✏️</span> Ask Question
+        </a>
+        {% endif %}
+        {% if current_user.is_friend and not current_user.is_admin %}
+        <button onclick="toggleFeedback()" class="btn btn-gold btn-lg" style="display: flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 16px; background: var(--gradient-gold); color: #333; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 8px 25px rgba(243,156,18,0.3); border: none; cursor: pointer; font-weight: 700; font-size: 16px;">
+            ⭐ Give Feedback
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- TYPING ANIMATION - SHOWS FIRST (FRIEND ONLY) -->
+<!-- ============================================ -->
+{% if current_user.is_friend and not current_user.is_admin and show_typing and typing_text %}
+<div id="typingSection" style="margin-bottom: 25px; padding: 30px; border-radius: 20px; background: var(--bg-primary); box-shadow: var(--card-shadow); border-left: 4px solid var(--gradient-gold); animation: slideDown 0.5s ease;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <span style="font-size: 28px;">✉️</span>
+        <h3 style="color: var(--text-secondary); margin: 0;">Message from Admin</h3>
+        <span style="background: var(--gradient-gold); color: #333; padding: 2px 12px; border-radius: 20px; font-size: 10px; font-weight: 600;">New</span>
+    </div>
+    <div style="padding: 25px; border-radius: 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); min-height: 100px;">
+        <p id="typingMessage" style="font-size: 20px; line-height: 1.8; color: var(--text-secondary); white-space: pre-wrap; font-style: italic;"></p>
+    </div>
+    <div style="margin-top: 20px; text-align: right;">
+        <button onclick="hideTypingAndShowQuestions()" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px; background: var(--gradient-primary); color: white; border: none; border-radius: 16px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 25px rgba(79,124,255,0.3);">
+            Next → 📖
+        </button>
+    </div>
+</div>
+
+<script>
+// Typing Animation
+document.addEventListener('DOMContentLoaded', function() {
+    const text = `{{ typing_text.text|safe }}`;
+    const element = document.getElementById('typingMessage');
+    let i = 0;
+    let fullText = '';
+    
+    function typing() {
+        if (i < text.length) {
+            const char = text.charAt(i);
+            if (char === '\n') {
+                fullText += '\n';
+            } else {
+                fullText += char;
+            }
+            element.textContent = fullText;
+            i++;
+            
+            let delay = 25;
+            if (char === '.' || char === '!' || char === '?') {
+                delay = 350;
+            } else if (char === ',') {
+                delay = 120;
+            }
+            setTimeout(typing, delay);
+        }
+    }
+    
+    setTimeout(typing, 500);
+});
+
+function hideTypingAndShowQuestions() {
+    const section = document.getElementById('typingSection');
+    const questionsSection = document.getElementById('questionsSection');
+    
+    if (section) {
+        section.style.display = 'none';
+    }
+    if (questionsSection) {
+        questionsSection.style.display = 'block';
+        setTimeout(() => {
+            questionsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+    
+    fetch('{{ url_for("seen_typing") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    }).catch(() => {});
+}
+</script>
+{% endif %}
+
+<!-- ============================================ -->
+<!-- QUESTIONS SECTION -->
+<!-- ============================================ -->
+<div id="questionsSection" style="{% if current_user.is_friend and not current_user.is_admin and show_typing and typing_text %}display: none;{% endif %}">
+
+<!-- ============================================ -->
+<!-- FEEDBACK SECTION - HIDDEN BY DEFAULT -->
+<!-- ============================================ -->
+{% if current_user.is_friend and not current_user.is_admin %}
+<div id="feedbackSection" style="display: none; margin-top: 20px; padding: 25px; border-radius: 20px; background: var(--bg-primary); box-shadow: var(--card-shadow); border-top: 4px solid var(--gradient-gold); animation: slideDown 0.4s ease;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <h3 style="color: var(--text-secondary);">⭐ Rate Your Friend</h3>
+            <span style="background: var(--gradient-gold); color: #333; padding: 2px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;">Feedback</span>
+        </div>
+        <button onclick="toggleFeedback()" class="btn btn-danger btn-sm" style="padding: 6px 14px; border-radius: 12px; font-size: 12px; background: var(--accent-red); color: white; border: none; cursor: pointer; transition: all 0.3s ease;">
+            ✕ Close
+        </button>
+    </div>
+    
+    {% if feedback_questions %}
+        {% set has_submitted = namespace(value=false) %}
+        {% for fq in feedback_questions %}
+            {% for response in fq.responses %}
+                {% if response.user_id == current_user.id %}
+                    {% set has_submitted.value = true %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+        
+        {% if has_submitted.value %}
+        <div style="text-align: center; padding: 30px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 16px;">
+            <div style="font-size: 48px;">🌟</div>
+            <h3 style="color: var(--text-secondary); margin: 15px 0 10px 0;">Thank You!</h3>
+            <p style="color: var(--text-muted);">You have already submitted your feedback.</p>
+        </div>
+        {% else %}
+        <form method="post" action="{{ url_for('submit_feedback') }}" id="feedbackForm" onsubmit="return validateFeedback()">
+            {% for q in feedback_questions %}
+            <div style="padding: 16px 20px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); margin-bottom: 15px;">
+                <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 10px; font-size: 15px;">{{ q.question }}</label>
+                <input type="hidden" name="question_id" value="{{ q.id }}">
+                <div class="star-rating" data-question="{{ q.id }}">
+                    <input type="radio" name="rating_{{ q.id }}" id="star5_{{ q.id }}" value="5">
+                    <label for="star5_{{ q.id }}" data-rating="5" onclick="selectStar('{{ q.id }}', 5)">⭐</label>
+                    <input type="radio" name="rating_{{ q.id }}" id="star4_{{ q.id }}" value="4">
+                    <label for="star4_{{ q.id }}" data-rating="4" onclick="selectStar('{{ q.id }}', 4)">⭐</label>
+                    <input type="radio" name="rating_{{ q.id }}" id="star3_{{ q.id }}" value="3">
+                    <label for="star3_{{ q.id }}" data-rating="3" onclick="selectStar('{{ q.id }}', 3)">⭐</label>
+                    <input type="radio" name="rating_{{ q.id }}" id="star2_{{ q.id }}" value="2">
+                    <label for="star2_{{ q.id }}" data-rating="2" onclick="selectStar('{{ q.id }}', 2)">⭐</label>
+                    <input type="radio" name="rating_{{ q.id }}" id="star1_{{ q.id }}" value="1">
+                    <label for="star1_{{ q.id }}" data-rating="1" onclick="selectStar('{{ q.id }}', 1)">⭐</label>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px; text-align: center;">
+                    <span id="rating_text_{{ q.id }}" style="font-weight: 600; color: #ddd;">Select a star</span>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div style="padding: 16px 20px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow);">
+                <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 8px;">💬 Additional Comments (Optional)</label>
+                <textarea name="comment" id="feedback_comment" style="width: 100%; padding: 14px 18px; border: none; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); font-size: 14px; color: var(--text-primary); outline: none; resize: vertical; min-height: 70px; font-family: inherit;" placeholder="Share your thoughts..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-gold" style="margin-top: 15px; width: 100%; justify-content: center; padding: 14px; font-size: 16px; background: var(--gradient-gold); color: #333; border: none; border-radius: 16px; cursor: pointer; font-weight: 700; transition: all 0.3s ease; box-shadow: 0 8px 30px rgba(243,156,18,0.3);">
+                ⭐ Submit Feedback
+            </button>
+        </form>
+        {% endif %}
+    {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 20px;">No feedback questions available.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ============================================ -->
+<!-- QUESTIONS - ONE BY ONE -->
+<!-- ============================================ -->
+{% if current_question %}
+
+<!-- Progress Bar -->
+<div style="margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <span style="color: var(--text-muted); font-size: 14px;">Question {{ current_index + 1 }} of {{ total_questions }}</span>
+        <span style="color: var(--text-muted); font-size: 14px;">{{ ((current_index + 1) / total_questions * 100)|round|int }}%</span>
+    </div>
+    <div style="width: 100%; height: 8px; border-radius: 10px; background: var(--bg-primary); box-shadow: var(--inset-shadow); overflow: hidden;">
+        <div style="height: 100%; border-radius: 10px; background: var(--gradient-primary); width: {{ ((current_index + 1) / total_questions * 100) }}%; transition: width 0.5s ease;"></div>
+    </div>
+</div>
+
+<!-- Current Question -->
+<div style="padding: 22px; border-radius: 20px; background: var(--bg-primary); box-shadow: var(--card-shadow); margin-bottom: 18px; border-left: 4px solid {% if current_question.has_answer %}var(--accent-green){% else %}var(--accent-yellow){% endif %};">
+    
+    <!-- Question Header -->
+    <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="font-weight: 600; color: var(--accent-blue); font-size: 16px;">❓ {{ current_question.username }}</span>
+            <span style="color: var(--text-muted); font-size: 12px;">{{ current_question.created_at.split('T')[0] if current_question.created_at else '' }}</span>
+            {% if current_question.has_answer %}
+            <span style="background: var(--accent-green); color: white; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;">✅ Answered</span>
+            {% else %}
+            <span style="background: var(--accent-yellow); color: white; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;">⏳ Awaiting</span>
+            {% endif %}
+        </div>
+        {% if current_user.is_admin %}
+        <div style="display: flex; gap: 8px;">
+            <a href="{{ url_for('edit_question', question_id=current_question.id) }}" class="btn btn-primary btn-sm" style="padding: 6px 14px; border-radius: 12px; font-size: 12px; background: var(--accent-blue); color: white; text-decoration: none; transition: all 0.3s ease; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                ✏️ Edit
+            </a>
+            <button onclick="confirmDelete('question', '{{ current_question.id }}')" class="btn btn-danger btn-sm" style="padding: 6px 14px; border-radius: 12px; font-size: 12px; background: var(--accent-red); color: white; border: none; cursor: pointer; transition: all 0.3s ease;">
+                🗑️
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Question Text -->
+    <div style="font-size: 17px; color: var(--text-secondary); line-height: 1.7; padding: 14px 18px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 14px; margin-bottom: 15px;">
+        {{ current_question.text }}
+    </div>
+    
+    <!-- Media Buttons -->
+    {% if current_question.image_data or current_question.video_data or current_question.audio_data %}
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding: 12px 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 14px; align-items: center;">
+        <span style="color: var(--text-muted); font-size: 13px; font-weight: 600; margin-right: 5px;">📎 Attachments:</span>
+        
+        {% if current_question.image_data %}
+        <button class="media-reveal-btn image-btn" onclick="toggleMedia('q_img_{{ current_question.id }}', this)" style="padding: 8px 18px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-family); font-size: 13px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-blue); border-left: 3px solid var(--accent-blue);">
+            <span>🖼️</span>
+            <span class="btn-text">Show Image</span>
+            <span class="arrow" style="font-size: 10px;">▼</span>
+        </button>
+        {% endif %}
+        
+        {% if current_question.video_data %}
+        <button class="media-reveal-btn video-btn" onclick="toggleMedia('q_vid_{{ current_question.id }}', this)" style="padding: 8px 18px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-family); font-size: 13px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-red); border-left: 3px solid var(--accent-red);">
+            <span>🎬</span>
+            <span class="btn-text">Play Video</span>
+            <span class="arrow" style="font-size: 10px;">▼</span>
+        </button>
+        {% endif %}
+        
+        {% if current_question.audio_data %}
+        <button class="media-reveal-btn audio-btn" onclick="toggleMedia('q_aud_{{ current_question.id }}', this)" style="padding: 8px 18px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-family); font-size: 13px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-green); border-left: 3px solid var(--accent-green);">
+            <span>🎵</span>
+            <span class="btn-text">Play Audio</span>
+            <span class="arrow" style="font-size: 10px;">▼</span>
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Media Content -->
+    <div id="q_img_{{ current_question.id }}" class="media-content" style="display: none; margin-bottom: 12px;">
+        <img src="data:image/jpeg;base64,{{ current_question.image_data }}" alt="Question image" style="max-width: 100%; max-height: 400px; width: auto; border-radius: 12px; box-shadow: var(--card-shadow); object-fit: contain;">
+    </div>
+    <div id="q_vid_{{ current_question.id }}" class="media-content" style="display: none; margin-bottom: 12px;">
+        <video controls style="max-width: 100%; max-height: 400px; width: auto; border-radius: 12px; box-shadow: var(--card-shadow);">
+            <source src="data:video/mp4;base64,{{ current_question.video_data }}">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    <div id="q_aud_{{ current_question.id }}" class="media-content" style="display: none; margin-bottom: 12px;">
+        <audio controls style="width: 100%; border-radius: 12px;">
+            <source src="data:audio/mpeg;base64,{{ current_question.audio_data }}">
+        </audio>
+    </div>
+    
+    <!-- Answer Section -->
+    {% if current_question.has_answer and current_question.answer_text %}
+    <div style="margin-top: 15px; padding: 16px 18px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-left: 4px solid var(--accent-green);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="font-weight: 600; color: var(--accent-green); font-size: 14px;">📌 Answer</span>
+        </div>
+        <div style="color: var(--text-secondary); line-height: 1.6;">{{ current_question.answer_text }}</div>
+        
+        {% if current_question.answer_image_data or current_question.answer_video_data or current_question.answer_audio_data %}
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 12px; align-items: center;">
+            <span style="color: var(--text-muted); font-size: 12px; font-weight: 600; margin-right: 5px;">📎 Answer Media:</span>
+            
+            {% if current_question.answer_image_data %}
+            <button class="media-reveal-btn image-btn" onclick="toggleMedia('a_img_{{ current_question.id }}', this)" style="padding: 6px 14px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-family); font-size: 12px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-blue); border-left: 3px solid var(--accent-blue);">
+                <span>🖼️</span>
+                <span class="btn-text">Show Image</span>
+                <span class="arrow" style="font-size: 10px;">▼</span>
+            </button>
+            {% endif %}
+            
+            {% if current_question.answer_video_data %}
+            <button class="media-reveal-btn video-btn" onclick="toggleMedia('a_vid_{{ current_question.id }}', this)" style="padding: 6px 14px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-family); font-size: 12px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-red); border-left: 3px solid var(--accent-red);">
+                <span>🎬</span>
+                <span class="btn-text">Play Video</span>
+                <span class="arrow" style="font-size: 10px;">▼</span>
+            </button>
+            {% endif %}
+            
+            {% if current_question.answer_audio_data %}
+            <button class="media-reveal-btn audio-btn" onclick="toggleMedia('a_aud_{{ current_question.id }}', this)" style="padding: 6px 14px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-family); font-size: 12px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-green); border-left: 3px solid var(--accent-green);">
+                <span>🎵</span>
+                <span class="btn-text">Play Audio</span>
+                <span class="arrow" style="font-size: 10px;">▼</span>
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div id="a_img_{{ current_question.id }}" class="media-content" style="display: none; margin-top: 10px;">
+            <img src="data:image/jpeg;base64,{{ current_question.answer_image_data }}" alt="Answer image" style="max-width: 100%; max-height: 300px; width: auto; border-radius: 12px; object-fit: contain;">
+        </div>
+        <div id="a_vid_{{ current_question.id }}" class="media-content" style="display: none; margin-top: 10px;">
+            <video controls style="max-width: 100%; max-height: 300px; width: auto; border-radius: 12px;">
+                <source src="data:video/mp4;base64,{{ current_question.answer_video_data }}">
+            </video>
+        </div>
+        <div id="a_aud_{{ current_question.id }}" class="media-content" style="display: none; margin-top: 10px;">
+            <audio controls style="width: 100%; border-radius: 12px;">
+                <source src="data:audio/mpeg;base64,{{ current_question.answer_audio_data }}">
+            </audio>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- ============================================ -->
+    <!-- REPLIES -->
+    <!-- ============================================ -->
+    {% if replies %}
+    <div style="margin-top: 15px; padding: 16px 18px; border-radius: 14px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-left: 4px solid var(--accent-purple);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <span style="font-weight: 600; color: var(--accent-purple); font-size: 14px;">💬 Replies</span>
+            <span style="background: var(--accent-purple); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px;">{{ replies|length }}</span>
+        </div>
+        {% for reply in replies %}
+        <div style="padding: 12px 16px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 12px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 600; color: var(--accent-green); font-size: 14px;">💬 {{ reply.username }}</span>
+                    <span style="color: var(--text-muted); font-size: 11px;">{{ reply.created_at.split('T')[0] if reply.created_at else '' }}</span>
+                </div>
+                {% if current_user.is_admin %}
+                <button onclick="confirmDelete('reply', '{{ reply.id }}', '{{ current_question.id }}')" class="btn btn-danger btn-sm" style="padding: 4px 10px; border-radius: 10px; font-size: 11px; background: var(--accent-red); color: white; border: none; cursor: pointer; transition: all 0.3s ease;">
+                    🗑️
+                </button>
+                {% endif %}
+            </div>
+            <div style="color: var(--text-secondary); line-height: 1.5; margin-top: 5px;">{{ reply.text }}</div>
+            
+            <!-- Reply Media -->
+            {% if reply.image_data or reply.video_data or reply.audio_data %}
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding: 8px 12px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 10px; align-items: center;">
+                <span style="color: var(--text-muted); font-size: 11px; font-weight: 600; margin-right: 3px;">📎:</span>
+                {% if reply.image_data %}
+                <button class="media-reveal-btn image-btn" onclick="toggleMedia('r_img_{{ reply.id }}', this)" style="padding: 5px 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-family); font-size: 11px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-blue); border-left: 3px solid var(--accent-blue);">
+                    <span>🖼️</span>
+                    <span class="btn-text">Show</span>
+                    <span class="arrow" style="font-size: 9px;">▼</span>
+                </button>
+                {% endif %}
+                {% if reply.video_data %}
+                <button class="media-reveal-btn video-btn" onclick="toggleMedia('r_vid_{{ reply.id }}', this)" style="padding: 5px 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-family); font-size: 11px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-red); border-left: 3px solid var(--accent-red);">
+                    <span>🎬</span>
+                    <span class="btn-text">Play</span>
+                    <span class="arrow" style="font-size: 9px;">▼</span>
+                </button>
+                {% endif %}
+                {% if reply.audio_data %}
+                <button class="media-reveal-btn audio-btn" onclick="toggleMedia('r_aud_{{ reply.id }}', this)" style="padding: 5px 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-family); font-size: 11px; background: var(--bg-primary); box-shadow: 4px 4px 8px var(--shadow-light), -4px -4px 8px var(--shadow-dark); color: var(--accent-green); border-left: 3px solid var(--accent-green);">
+                    <span>🎵</span>
+                    <span class="btn-text">Play</span>
+                    <span class="arrow" style="font-size: 9px;">▼</span>
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div id="r_img_{{ reply.id }}" class="media-content" style="display: none; margin-top: 8px;">
+                <img src="data:image/jpeg;base64,{{ reply.image_data }}" alt="Reply image" style="max-width: 100%; max-height: 200px; width: auto; border-radius: 12px; object-fit: contain;">
+            </div>
+            <div id="r_vid_{{ reply.id }}" class="media-content" style="display: none; margin-top: 8px;">
+                <video controls style="max-width: 100%; max-height: 200px; width: auto; border-radius: 12px;">
+                    <source src="data:video/mp4;base64,{{ reply.video_data }}">
+                </video>
+            </div>
+            <div id="r_aud_{{ reply.id }}" class="media-content" style="display: none; margin-top: 8px;">
+                <audio controls style="width: 100%; border-radius: 12px;">
+                    <source src="data:audio/mpeg;base64,{{ reply.audio_data }}">
+                </audio>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Reply Button -->
+    <div style="margin-top: 15px; display: flex; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--shadow-light);">
+        {% if current_user.is_friend or current_user.is_admin %}
+            <a href="{{ url_for('reply_question', question_id=current_question.id) }}" 
+               style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 16px; background: var(--gradient-gold); color: #333; text-decoration: none; font-weight: 700; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 25px rgba(243,156,18,0.3);">
+                <span style="font-size: 18px;">💬</span> Reply to this Question
+                <span style="transition: transform 0.3s ease;">→</span>
+            </a>
+        {% else %}
+            <span style="color: var(--text-muted); font-size: 14px; padding: 10px 20px; background: var(--bg-primary); box-shadow: var(--inset-shadow); border-radius: 12px;">
+                🔒 Login as friend to reply
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Navigation Buttons -->
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-top: 10px;">
+    <form method="post" action="{{ url_for('navigate_question') }}">
+        <input type="hidden" name="direction" value="prev">
+        <button type="submit" class="btn btn-secondary" {% if current_index == 0 %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+            ← Previous
+        </button>
+    </form>
+    
+    <span style="color: var(--text-muted); font-size: 14px;">
+        {{ current_index + 1 }} / {{ total_questions }}
+    </span>
+    
+    <form method="post" action="{{ url_for('navigate_question') }}">
+        <input type="hidden" name="direction" value="next">
+        <button type="submit" class="btn btn-primary" {% if current_index == total_questions - 1 %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+            Next →
+        </button>
+    </form>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <span class="icon">📭</span>
+    <h3>No Questions Yet</h3>
+    <p>{% if current_user.is_admin %}Ask your first question!{% else %}Wait for admin to ask a question.{% endif %}</p>
+</div>
+{% endif %}
+
+</div><!-- End questionsSection -->
+
+<!-- ============================================ -->
+<!-- STYLES & SCRIPTS -->
+<!-- ============================================ -->
+<style>
+.media-reveal-btn {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.media-reveal-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 6px 6px 12px var(--shadow-light), -6px -6px 12px var(--shadow-dark);
+}
+.media-reveal-btn .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    font-size: 10px;
+}
+.media-reveal-btn.active .arrow {
+    transform: rotate(180deg);
+}
+.media-content {
+    animation: mediaReveal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes mediaReveal {
+    from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Star Rating Styles */
+.star-rating {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 10px;
+    justify-content: center;
+    padding: 10px;
+}
+.star-rating input { display: none; }
+.star-rating label {
+    font-size: 40px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    user-select: none;
+}
+.star-rating label:hover {
+    transform: scale(1.2) rotate(-5deg);
+}
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input:checked ~ label {
+    color: #f5a623;
+    transform: scale(1.15);
+    text-shadow: 0 0 20px rgba(245, 166, 35, 0.4);
+}
+
+@media (max-width: 600px) {
+    .media-reveal-btn {
+        font-size: 12px !important;
+        padding: 6px 12px !important;
+    }
+    .star-rating label { font-size: 32px; }
+    .star-rating { gap: 6px; }
+    .btn-lg { width: 100%; justify-content: center; }
+}
+</style>
+
+<script>
+// ============================================
+// TOGGLE FEEDBACK SECTION
+// ============================================
+function toggleFeedback() {
+    const section = document.getElementById('feedbackSection');
+    if (section) {
+        if (section.style.display === 'none' || section.style.display === '') {
+            section.style.display = 'block';
+            setTimeout(() => {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        } else {
+            section.style.display = 'none';
+        }
+    }
+}
+
+// ============================================
+// MEDIA TOGGLE
+// ============================================
+function toggleMedia(mediaId, button) {
+    const content = document.getElementById(mediaId);
+    if (content) {
+        if (content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+            if (button) {
+                button.classList.add('active');
+                const textSpan = button.querySelector('.btn-text');
+                if (textSpan) {
+                    if (textSpan.textContent.includes('Show')) {
+                        textSpan.textContent = 'Hide';
+                    } else if (textSpan.textContent.includes('Play')) {
+                        textSpan.textContent = 'Hide';
+                    }
+                }
+            }
+            const video = content.querySelector('video');
+            if (video) video.play();
+        } else {
+            content.style.display = 'none';
+            if (button) {
+                button.classList.remove('active');
+                const textSpan = button.querySelector('.btn-text');
+                if (textSpan) {
+                    const type = button.classList.contains('image-btn') ? 'Image' :
+                                button.classList.contains('video-btn') ? 'Video' : 'Audio';
+                    textSpan.textContent = type === 'Image' ? 'Show Image' : 
+                                          type === 'Video' ? 'Play Video' : 'Play Audio';
+                }
+            }
+            const video = content.querySelector('video');
+            if (video) video.pause();
+        }
+    }
+}
+
+// ============================================
+// DELETE CONFIRMATION - FIXED
+// ============================================
+function confirmDelete(type, id, questionId) {
+    const message = type === 'question' 
+        ? 'Delete this question and all replies?' 
+        : 'Delete this reply?';
+    
+    if (confirm('⚠️ ' + message)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        
+        if (type === 'question') {
+            form.action = '{{ url_for("delete_question", question_id=0) }}'.replace('0', id);
+        } else {
+            // For reply, we need both question_id and reply_id
+            form.action = '{{ url_for("delete_reply", question_id=0, reply_id=0) }}'
+                .replace('question_id=0', 'question_id=' + questionId)
+                .replace('reply_id=0', 'reply_id=' + id);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// ============================================
+// STAR RATING SELECTION
+// ============================================
+function selectStar(questionId, rating) {
+    const container = document.querySelector(`.star-rating[data-question="${questionId}"]`);
+    if (!container) return;
+    
+    const labels = container.querySelectorAll('label');
+    const textElement = document.getElementById(`rating_text_${questionId}`);
+    
+    labels.forEach(label => {
+        label.style.color = '#e0e0e0';
+        label.style.transform = 'scale(1)';
+    });
+    
+    const selectedLabel = document.getElementById(`star${rating}_${questionId}`);
+    if (selectedLabel) {
+        const allLabels = selectedLabel.parentElement.querySelectorAll('label');
+        let found = false;
+        allLabels.forEach(label => {
+            if (label === selectedLabel) found = true;
+            if (!found) {
+                label.style.color = '#f5a623';
+                label.style.transform = 'scale(1.1)';
+            }
+        });
+        selectedLabel.style.color = '#f5a623';
+        selectedLabel.style.transform = 'scale(1.2)';
+    }
+    
+    const radio = document.getElementById(`star${rating}_${questionId}`);
+    if (radio) radio.checked = true;
+    
+    const ratingTexts = {
+        1: '⭐ Very Poor',
+        2: '⭐⭐ Poor',
+        3: '⭐⭐⭐ Good',
+        4: '⭐⭐⭐⭐ Very Good',
+        5: '⭐⭐⭐⭐⭐ Excellent!'
+    };
+    if (textElement) {
+        textElement.textContent = ratingTexts[rating] || 'Selected';
+        textElement.style.color = '#f5a623';
+        textElement.style.fontWeight = '700';
+    }
+}
+
+// ============================================
+// VALIDATE FEEDBACK
+// ============================================
+function validateFeedback() {
+    const questions = document.querySelectorAll('.star-rating');
+    let allRated = true;
+    
+    questions.forEach(container => {
+        const checked = container.querySelector('input[type="radio"]:checked');
+        if (!checked) {
+            allRated = false;
+            container.parentElement.style.border = '2px solid #e74c3c';
+            container.parentElement.style.borderRadius = '14px';
+        } else {
+            container.parentElement.style.border = 'none';
+        }
+    });
+    
+    if (!allRated) {
+        alert('⚠️ Please rate all questions before submitting!');
+        return false;
+    }
+    return true;
+}
+</script>
+
+{% endblock %}
